@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+# from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
@@ -11,11 +11,13 @@ from dotenv import load_dotenv
 from app.database import get_db
 from app.models import User
 from app.schemas import TokenData
+import bcrypt
 
 load_dotenv()
 
 # Password hashing setup
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# removed below due to deprecation warning
+# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # OAuth2 setup - tells FastAPI where to look for the token
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
@@ -28,12 +30,14 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Check if plain password matches the hashed version"""
-    return pwd_context.verify(plain_password, hashed_password)
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
 
 def get_password_hash(password: str) -> str:
     """Hash a plain password for storage"""
-    return pwd_context.hash(password)
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
